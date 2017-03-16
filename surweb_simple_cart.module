@@ -1,0 +1,195 @@
+<?php 
+/**
+ * HOOK page_build
+ * подключаем скрипты после рендера страницы
+ * @param  [type] &$page [description]
+ * @return [type]        [description]
+ */
+function surweb_simple_cart_page_build(&$page)
+{
+  // dpm($page);
+  // подключаем стили и скрипты
+  drupal_add_css(drupal_get_path('module', 'surweb_simple_cart') . '/css/main.css');
+  drupal_add_js(drupal_get_path('module', 'surweb_simple_cart') . '/js/main.js');
+  drupal_add_js(drupal_get_path('module', 'surweb_simple_cart') . '/js/jquery.cookie.min.js');
+
+}
+
+/**
+ * HOOK node_view
+ * хук предназначен для работы с нодой непосредственно перед выводом
+ * добавляем кнопку после body в тип материала
+ * @param  [type] $node      [description]
+ * @param  [type] $view_mode [description]
+ * @param  [type] $langcode  [description]
+ * @return [type]            [description]
+ */
+function surweb_simple_cart_node_view($node, $view_mode, $langcode) {  
+
+  if (($node->type == variable_get('cart_node_type', 'products')) && ($view_mode == 'full')) {
+    $node->content['body'][0]['#markup'] .= '<button class="btn-add-to-cart" data-name="'.$node->title.'" data-id="---" data-cost="'.$node->field_price["und"][0]["value"].'">Заказать</button>';
+    
+  }
+}
+
+
+/**
+ * HOOK block_view
+ * @param  string $delta [description]
+ * @return [type]        [description]
+ */
+function surweb_simple_cart_block_view($delta = '') {
+  // The $delta parameter tells us which block is being requested.
+  switch ($delta) {
+  
+    case 'surweb_simple_cart_block':
+      $block['subject'] = "Корзина";
+      $block['content'] = '<div class="cart-block">
+  <div class="cart-icon"><img src="/'.drupal_get_path("module", "surweb_simple_cart") . "/img/cart.png".'" alt="Корзина">
+  <div class="cart-badge">1</div>
+  </div>
+  <div class="cart-info">
+    <div class="cart-cost"></div>
+  </div>
+
+</div>';
+      break;
+  }
+  return $block;
+}
+
+/**
+ * HOOK block_info
+ * @return [type] [description]
+ */
+function surweb_simple_cart_block_info() {
+  $blocks['surweb_simple_cart_block'] = array(
+    // info: The name of the block.
+    'info' => "Блок корзины простой корзины",
+    // Block caching options (per role, per user, etc.)
+    // DRUPAL_CACHE_PER_ROLE is the default.
+    'cache' => DRUPAL_CACHE_PER_ROLE,
+  );
+
+
+  return $blocks;
+}
+
+
+/**
+ * HOOK menu
+ * страницы модуля
+ * @return [type] [description]
+ */
+function surweb_simple_cart_menu()
+{
+  $items = array();
+  $items['simple-cart/send'] = array(
+    'title' => 'simple cart send',
+    'page callback' => 'send_invoice',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/config/user-interface/surweb-simple-cart-setting'] = array(
+      'title' => 'Страница настнойки Simple Cart',
+      'description' => 'Прстейший модуль корзины',
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('surweb_cart_settings'),
+      'file' => 'inc/admin_form.inc',
+      'access callback' => TRUE, 
+      'type' => MENU_NORMAL_ITEM,
+    );
+
+  return $items;
+}
+
+function send_invoice(){
+  // print_r($_SERVER);
+  // print_r($_POST['user']);
+
+  global $base_url;
+  $_origin = $_SERVER['HTTP_ORIGIN'];
+
+
+  // проверка на источник формы
+  if ($_origin != $base_url) {
+    exit ("fuuuuu");
+  }
+
+  $_user = $_POST['user'];
+
+  if (empty($_user['email'])) {
+    exit ("empty mail field");
+  }
+
+
+  $site_email = variable_get('site_mail', '');
+  $site_name = variable_get('site_name', '');
+  $date = date("j/m/Y (H:i)");
+
+  $title = "ЗАКАЗ на сайте $site_name от $date";
+
+
+  $body = strtoupperrus(strtoupper($title)) . "\r\n\r\n";
+  $_items = $_POST['items'];
+  $_count = $_POST['count'];
+  $_summ = $_POST['summ'];
+
+  $body .= "ваш заказ: \r\n--------------------------------------------------------------------------------\r\n\r\n";
+  foreach ($_items as $item) {
+    $body .= "- ".$item['name']. "\t" .$item['qty']. "\t" .$item['cost'] . " руб." . "\r\n";
+    $body .= "--------------------------------------------------------------------------------\r\n";
+  }
+
+  $body .= "\r\nИТОГО: $_summ руб.\r\n";
+
+  $body .= "\r\nКонтакты сайта:\r\n\tпочта: " . $site_email . "\r\n" . "\tадрес: $base_url";
+
+  // $body .= $_items;
+
+
+  $HOST_MAIL = @substr($_user['email'],strpos($_user['email'],"@")+1);
+          if(!empty($HOST_MAIL)) {
+            if(checkdnsrr($HOST_MAIL)){
+
+              drupal_mail('system', 'mail', $_user['email'], language_default(), array(
+                'context' => array(
+                  'subject' => $title,
+                  'message' => $body,
+                )
+              ));
+
+              // для письма админу
+              $body .= "--------------------------------------------------------------------------------\r\n";
+              $body .= "\r\nДанные пользователя: ";
+              
+              if (!empty($_user['username'])) {
+                $body .= "\r\n\tИмя клиента: ". $_user['username'];
+              }
+              if (!empty($_user['email'])) {
+                $body .= "\r\n\tпочта клиента: ". $_user['email'];
+              }
+              if (!empty($_user['tel'])) {
+                $body .= "\r\n\tтелефон клиента: ". $_user['tel'];
+              }
+
+              // копия письма админу сайта
+              drupal_mail('system', 'mail', $site_mail, language_default(), array(
+              // drupal_mail('system', 'mail', 'surweb.dev@gmail.com', language_default(), array(
+                'context' => array(
+                  'subject' => $title,
+                  'message' => $body,
+                )
+              ));
+
+
+            }
+          }
+
+}
+
+
+function strtoupperrus($string){
+  return strtr($string,"ёйцукенгшщзхъфывапролджэячсмитьбю","ЁЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ");
+}

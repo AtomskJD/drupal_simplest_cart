@@ -1,0 +1,11 @@
+name = simple JS cart
+description = Простая корзина для прдукции 
+package = surweb cart
+core = 7.x
+
+; Information added by Drupal.org packaging script on 2017-03-14
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "surweb"
+datestamp = "1474218553"
+
