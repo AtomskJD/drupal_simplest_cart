@@ -2,10 +2,13 @@ name = simple JS cart
 description = Простая корзина для прдукции 
 package = surweb cart
 core = 7.x
+dependencies[] = colorbox
+dependencies[] = jquery_update
+configure = admin/config/user-interface/surweb-simple-cart-setting
 
 ; Information added by Drupal.org packaging script on 2017-03-14
 version = "7.x-1.x-dev"
 core = "7.x"
 project = "surweb"
-datestamp = "1474218553"
+datestamp = "1489646606"
 
