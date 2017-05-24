@@ -148,7 +148,7 @@ function send_invoice(){
   $body = strtoupperrus(strtoupper($title)) . "\r\n\r\n";
   $_items = $_POST['items'];
   $_count = $_POST['count'];
-  $_summ = $_POST['summ'];
+  $_summ = number_format ( $_POST['summ'], 2, "," , " " );
 
   $body .= "ваш заказ: \r\n--------------------------------------------------------------------------------\r\n\r\n";
   foreach ($_items as $item) {
@@ -175,7 +175,7 @@ function send_invoice(){
               ));
 
               // для письма админу
-              $body .= "--------------------------------------------------------------------------------\r\n";
+              $body .= "\r\n--------------------------------------------------------------------------------\r\n";
               $body .= "\r\nДанные пользователя: ";
               
               if (!empty($_user['username'])) {
@@ -189,7 +189,7 @@ function send_invoice(){
               }
 
               // копия письма админу сайта
-              drupal_mail('system', 'mail', $site_mail, language_default(), array(
+              drupal_mail('system', 'mail', $site_email, language_default(), array(
               // drupal_mail('system', 'mail', 'surweb.dev@gmail.com', language_default(), array(
                 'context' => array(
                   'subject' => $title,
@@ -213,7 +213,7 @@ function strtoupperrus($string){
 function show_message() {
   return array(
     '#markup' =>
-    t('<h2>Ваш заказ успешно отправлен</h2><p><a href="/">Вернуться на галвную</a></p>',
+    t('<h2>Ваш заказ успешно отправлен</h2><p><a href="/">Вернуться на главную страницу</a></p><p><a href="#" onclick="(function(){window.history.back();return false;})()">Вернуться к выбору</a></p>',
       array(
         '@simple_link' => url('examples/page_example/simple', array('absolute' => TRUE)),
         '@arguments_link' => url('examples/page_example/arguments/23/56', array('absolute' => TRUE)),

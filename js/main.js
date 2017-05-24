@@ -1,6 +1,33 @@
+// money prototype
+Number.prototype.formatMoney = function(c, d, t){
+var n = this, 
+    c = isNaN(c = Math.abs(c)) ? 2 : c, 
+    d = d == undefined ? "." : d, 
+    t = t == undefined ? "," : t, 
+    s = n < 0 ? "-" : "", 
+    i = String(parseInt(n = Math.abs(Number(n) || 0).toFixed(c))), 
+    j = (j = i.length) > 3 ? j % 3 : 0;
+   return s + (j ? i.substr(0, j) + t : "") + i.substr(j).replace(/(\d{3})(?=\d)/g, "$1" + t) + (c ? d + Math.abs(n - i).toFixed(c).slice(2) : "");
+ };
+
+
+(function () {
+	  function CustomEvent ( event, params ) {
+	    params = params || { bubbles: false, cancelable: false, detail: undefined };
+	    var evt = document.createEvent( 'CustomEvent' );
+	    evt.initCustomEvent( event, params.bubbles, params.cancelable, params.detail );
+	    return evt;
+	   }
+
+	  CustomEvent.prototype = window.Event.prototype;
+
+	  window.CustomEvent = CustomEvent;
+})();
+
+
 function Cart(_items) {
     var _this = this;
-    var _event = new Event('build');
+    var _event = new CustomEvent('build');
 
     // console.log(_items || "doddo");
     if (_items) {
@@ -58,7 +85,7 @@ function Cart(_items) {
         console.log('Count items: ' + _this.getCount());
     };
 
-    this.isInCart
+    // this.isInCart
 
     this.getBlockData = function() {
         var count = 0,
@@ -69,7 +96,7 @@ function Cart(_items) {
             summ += (this.items[i].cost * 1) * (this.items[i].qty * 1);
         }
 
-        return { count: count, summ: summ };
+        return { count: count, summ: (summ).formatMoney(2, ',', ' ') };
     };
 
     this.renderCheckout = function() {
@@ -97,6 +124,7 @@ function Cart(_items) {
         jQuery.cookie("cart", JSON.stringify(this.items), { path: '/' });
     };
 
+    
     this.getSum = function() {
         var summ = 0;
 
@@ -106,6 +134,8 @@ function Cart(_items) {
 
         return summ
     };
+
+
     this.getCount = function() {
         return _this.items.length;
     };
@@ -119,7 +149,7 @@ function Cart(_items) {
             summ += (items[i].cost * 1) * (items[i].qty * 1);
         }
 
-        return { count: count, summ: summ };
+        return { count: count, summ: (summ).formatMoney(2, ',', ' ') };
     }
 
     function isName(element, itemName) {
