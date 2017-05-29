@@ -122,6 +122,46 @@ function send_invoice(){
   // print_r($_SERVER);
   // print_r($_POST['user']);
 
+  $data = array();
+
+    if(isset($_GET['files'])) {
+        $error = false;
+        $files = array();
+        // $uri = 'public://';
+        $path= variable_get('file_public_path', conf_path() . '/files');
+
+        $uploaddir = $path."/recvizits/";
+
+        if( ! is_dir( $uploaddir ) ) mkdir( $uploaddir, 0777 );
+
+        foreach($_FILES as $file)
+        {
+            if(move_uploaded_file($file['tmp_name'], $uploaddir .basename($file['name'])))
+            {
+                $files = $uploaddir . $file['name'];
+                // $files[] = "recvizits/".$file['name'];
+            }
+            else
+            {
+                $error = true;
+            }
+        }
+
+        $data = ($error) ? array('error' => 'There was an error uploading your files') : array('files' => $files);
+
+
+        echo json_encode( $data );
+    }
+
+
+    // если не запрос на загрузку файловотправляем файлы
+    // то отправляем почту
+    else
+    {
+        $data = array('success' => 'Form was submitted', 'formData' => $_POST);
+
+        echo json_encode($data);
+
   global $base_url;
   $_origin = $_SERVER['HTTP_ORIGIN'];
 
@@ -146,9 +186,22 @@ function send_invoice(){
 
 
   $body = strtoupperrus(strtoupper($title)) . "\r\n\r\n";
+  $_filename = $_POST['filename'];
   $_items = $_POST['items'];
   $_count = $_POST['count'];
   $_summ = number_format ( $_POST['summ'], 2, "," , " " );
+  $_files = FALSE;
+  if (isset($_POST['files'])) {
+    if (file_exists($_POST['files'])) {
+      if (checkAccepted($_POST['files'])) {
+        $_files = $_POST['files'];
+      } else {
+        // если фаил существует но запрещенного типа - удаляем его
+        unlink($_POST['files']); 
+      }
+
+    }
+  }
 
   $body .= "ваш заказ: \r\n--------------------------------------------------------------------------------\r\n\r\n";
   foreach ($_items as $item) {
@@ -189,18 +242,39 @@ function send_invoice(){
               }
 
               // копия письма админу сайта
-              drupal_mail('system', 'mail', $site_email, language_default(), array(
-              // drupal_mail('system', 'mail', 'surweb.dev@gmail.com', language_default(), array(
-                'context' => array(
-                  'subject' => $title,
-                  'message' => $body,
-                )
-              ));
+              if ($_files) {
+                  # code...
+                drupal_mail('surweb_simple_cart', 'send_attachment', $site_email, language_default(), array(
+                    'subject' => $title,
+                    'body'    => $body,
+                    'attachments' => array(array('filepath' => $_files)),
+                ));
+
+                  // удаляем фаил для реализации временного хранилища
+                  unlink($_files);
+
+              } else {
+                drupal_mail('surweb_simple_cart', 'send_attachment', $site_email, language_default(), array(
+                    'subject' => $title,
+                      'body'    => $body,
+                ));
+              }
 
 
             }
           }
 
+    }
+}
+
+/**
+ * Implements hook_mail().
+ */
+function surweb_simple_cart_mail($key, &$message, $params) {
+  if ($key == 'send_attachment') {
+    $message['subject'] = "Клиент оформил ".$params['subject'];
+    $message['body'][] = $params['body'];
+  }
 }
 
 
@@ -236,4 +310,16 @@ function mail_checker() {
   } else {
     return drupal_json_output(array("access"=>'denied'));
   }
+}
+
+
+// для быстрой настройки доступа
+function checkAccepted ($path) {
+    $exts = explode(",", "jpeg,jpg,png,gif,bmp,doc,docx,txt,zip,rar");
+    $_pi = pathinfo($path);
+
+    if (in_array($_pi['extension'], $exts)) {
+        return true;    
+    } 
+    return false;
 }

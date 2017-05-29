@@ -102,7 +102,7 @@ function Cart(_items) {
     this.renderCheckout = function() {
         var output = '<div class="cart-checkout">';
         output += '<h2>Оформите ваш заказ</h2>';
-        output += '<div class="cart-form-user-data"><div class="line-field"><label for="username">Ваше имя</label><input required type="text" name="username" id="username"></div><div class="line-field"><label for="email">Ваш email</label><input required type="email" name="email" id="email"></div><div class="line-field"><label for="tel">Ваш телефон</label><input type="tel" name="tel" id="tel"></div></div>';
+        output += '<div class="cart-form-user-data"><div class="line-field"><label for="username">Ваше имя/Наименование организации</label><input required type="text" name="username" id="username"></div><div class="line-field"><label for="email">Ваш email</label><input required type="email" name="email" id="email"></div><div class="line-field"><label for="tel">Ваш телефон</label><input type="tel" name="tel" id="tel"></div><div class="line-field"><label for="file">Прикрепить реквизиты</label><input type="file" name="file" id="file"></div></div>';
         output += '<ul class="cart-checkout-list">';
         for (var i = 0; _this.items.length > i; i++) {
             output += '<li><span class="name" title=' + _this.items[i].name + '>' + _this.items[i].name.substr(0, 100) + '</span> <input type="number" class="qty" name="qty" min="1" value="' + _this.items[i].qty + '" data-name="' + _this.items[i].name + '"> <a href="#" class="del" data-name="' + _this.items[i].name + '">X</a></li>';
@@ -208,17 +208,91 @@ jQuery(function($) {
             $.cookie('cart-user', JSON.stringify(groupUser()), { path: '/' });
         });
 
+
+        // files attachments AJAX implements
+        var files;
+        $('input#files').change(function(event) {
+            files = this.files;
+        });
+
+        // DONE: сюда скопировать кусок для отправки почты с вложением
+        console.log('send 1');
+        // SEND BUTTON
         $('.btn-send-order').click(function(event) {
             checkForm(function(ok) {
                 if (ok) {
                     var user = {};
                     user = groupUser();
-                    $.post("/simple-cart/send", { items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user }).done(function(data) {
 
-                        $.colorbox.close();
-                        myCart.releaseCart();
-                        setTimeout('location="/simple-cart/message";', 1000);
-                    });
+                     // try attach files
+                    // Create a formdata object and add the files
+                    if (files) {
+                        console.log(files);
+                        var data = new FormData();
+                        $.each(files, function(key, value)
+                        {
+                            data.append(key, value);
+                        });
+
+                        $.ajax({
+                            url: '/simple-cart/send?files',
+                            type: 'POST',
+                            data: data,
+                            cache: false,
+                            dataType: 'text',
+                            processData: false, // Don't process the files
+                            contentType: false, // Set content type to false as jQuery will tell the server its a query string request
+                            success: function(data, textStatus, jqXHR)
+                            {
+                                if(typeof data.error === 'undefined')
+                                {
+                                    // Success so call function to process the form
+                                    // submitForm(event, data);
+                                    console.log(data);
+                                    console.log(JSON.parse(data).files);
+                                     $.post("/simple-cart/send", { items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user, files: JSON.parse(data).files }).done(function(data) {
+
+                                        // console.log(data);
+                                        
+                                        $.colorbox.close();
+                                        myCart.releaseCart();
+                                        setTimeout('location="/simple-cart/message";', 1000);
+                                        
+
+                                    });
+                                }
+                                else
+                                {
+                                    // Handle errors here
+                                    console.log('SERVER ERRORS: ' + data.error);
+                                }
+                            },
+                            error: function(jqXHR, textStatus, errorThrown)
+                            {
+                                // Handle errors here
+                                console.log('AJAX ERRORS: ' + textStatus);
+                                // STOP LOADING SPINNER
+                            }
+                        });
+                    } 
+                    // try attach files END
+
+
+                    else {
+                        console.log(files);
+                        // console.log({items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user});
+                        $.post("/simple-cart/send", { items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user }).done(function(data) {
+
+                            // console.log(data);
+
+                            $.colorbox.close();
+                            myCart.releaseCart();
+
+                            setTimeout('location="/simple-cart/message";', 1000);
+
+                        });
+                    }
+
 
                 };
             })
@@ -293,22 +367,91 @@ jQuery(function($) {
             $.cookie('cart-user', JSON.stringify(groupUser()));
         });
 
+
+        // files attachments AJAX implements
+        var files;
+        $('input#file').change(function(event) {
+            files = this.files;
+        });
+
+
+        //after clicking checkput button
+        // SEND BUTTON
         $('.btn-send-order').click(function(event) {
             checkForm(function(ok) {
                 if (ok) {
                     var user = {};
                     user = groupUser();
-                    // console.log({items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user});
-                    $.post("/simple-cart/send", { items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user }).done(function(data) {
 
-                        // console.log(data);
+                    // try attach files
+                    // Create a formdata object and add the files
+                    if (files) {
+                        console.log(files);
+                        var data = new FormData();
+                        $.each(files, function(key, value)
+                        {
+                            data.append(key, value);
+                        });
 
-                        $.colorbox.close();
-                        myCart.releaseCart();
+                        $.ajax({
+                            url: '/simple-cart/send?files',
+                            type: 'POST',
+                            data: data,
+                            cache: false,
+                            dataType: 'text',
+                            processData: false, // Don't process the files
+                            contentType: false, // Set content type to false as jQuery will tell the server its a query string request
+                            success: function(data, textStatus, jqXHR)
+                            {
+                                if(typeof data.error === 'undefined')
+                                {
+                                    // Success so call function to process the form
+                                    // submitForm(event, data);
+                                    console.log(data);
+                                    console.log(JSON.parse(data).files);
+                                     $.post("/simple-cart/send", { items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user, files: JSON.parse(data).files }).done(function(data) {
 
-                        setTimeout('location="/simple-cart/message";', 1000);
+                                        // console.log(data);
+                                        
+                                        $.colorbox.close();
+                                        myCart.releaseCart();
+                                        setTimeout('location="/simple-cart/message";', 1000);
+                                        
 
-                    });
+                                    });
+                                }
+                                else
+                                {
+                                    // Handle errors here
+                                    console.log('SERVER ERRORS: ' + data.error);
+                                }
+                            },
+                            error: function(jqXHR, textStatus, errorThrown)
+                            {
+                                // Handle errors here
+                                console.log('AJAX ERRORS: ' + textStatus);
+                                // STOP LOADING SPINNER
+                            }
+                        });
+                    } 
+                    // try attach files END
+
+
+                    else {
+                        console.log(files);
+                        // console.log({items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user});
+                        $.post("/simple-cart/send", { items: myCart.items, count: myCart.getCount(), summ: myCart.getSum(), user: user }).done(function(data) {
+
+                            // console.log(data);
+
+                            $.colorbox.close();
+                            myCart.releaseCart();
+
+                            setTimeout('location="/simple-cart/message";', 1000);
+
+                        });
+                    }
+
 
                 };
             });

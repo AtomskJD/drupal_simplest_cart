@@ -4,6 +4,8 @@ package = surweb cart
 core = 7.x
 dependencies[] = colorbox
 dependencies[] = jquery_update
+dependencies[] = mailsystem
+dependencies[] = mimemail
 configure = admin/config/user-interface/surweb-simple-cart-setting
 
 ; Information added by Drupal.org packaging script on 2017-03-14
